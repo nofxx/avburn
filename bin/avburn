@@ -1,0 +1,210 @@
+#!/usr/bin/env ruby
+require 'shoes'
+
+Avrdude = "avrdude"
+AvrdudeConf = File.open("/etc/avrdude.conf").read
+Avb = ENV["HOME"] + "/.avb"
+Conf = {}
+
+
+Memory = %w{ eeprom flash fuse efuse hfuse lfuse lock signature fuseN application apptable boot prodsig usersig }
+Format = {
+  :a => "Auto detect",
+  :i => "Intel Hex",
+  :s => "Motorola S-record",
+  :r => "Raw binary",
+  # :m => "Immediate",
+  :d => "Decimal",
+  :h => "Hexadecimal",
+  :o => "Octal",
+  :b => "Binary" }  #todo hash
+
+
+
+def read_conf
+  `touch #{Avb}` unless File.exists?(Avb)
+  Conf.merge! YAML.load(File.read(Avb)) || {}
+end
+
+def write_conf
+  File.open(Avb, 'w') { |f| f << Conf.to_yaml }
+end
+
+def changed(obj)
+  Conf.merge!({ :platform => @platform, :prog => @prog, :memory => @memory })
+  write_conf
+end
+
+def log(txt)
+  @log.text += txt + "\n" #+ @log.text
+end
+
+def capture_stderr
+  # The output stream must be an IO-like object. In this case we capture it in
+  # an in-memory IO object so we can return the string value. You can assign any
+  # IO object here.
+  previous_stderr, $stderr = $stderr, StringIO.new
+  yield
+  $stderr.string
+ensure
+  # Restore the previous value of stderr (typically equal to STDERR).
+  $stderr = previous_stderr
+end
+
+
+
+def run_comm(c)
+  @log.text = ""
+  comm = "#{Avrdude} -c #{Conf[:prog]} -p #{Conf[:platform]} "
+  comm << "-P #{Conf[:port]} " if @port
+  comm << "-U #{c}"
+  log  "> Running #{comm}"
+  Kernel.system "#{comm} &> output"
+  log File.read("output")
+end
+
+# #{Conf[:memory]}
+def read_from_chip(name)
+  run_comm "#{name}:r:#{name}:h"
+  data = File.read(name)
+  log "DATA #{data}"
+end
+
+
+read_conf
+
+class Part
+  def self.all
+    @parts ||= AvrdudeConf.scan(/part\s*\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+  end
+
+  def self.find(p)
+    puts "search! #{p}"
+  end
+end
+
+
+class Prog
+  def self.all
+    @progs ||= AvrdudeConf.scan(/programmer\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+  end
+end
+
+Shoes.app :width => 800 do
+  background gradient(rgb(245, 245, 245), rgb(190,190,190))
+#  background "#e0e0e0"
+
+  flow do
+    background "#252499"
+    # image "gamefaqs-logo.gif"
+   # title "AVRb", :margin_top => 30, :color => "#ffffff"
+     banner "AVRb", :margin_left => 15, :margin_top => 30, :variant => 'smallcaps', :size => 'large', :stroke => "#fff"
+  end
+
+  stack :margin => 10 do
+    flow do
+      stack :width => '50%' do
+        flow do
+          para "Programmer: "
+          @prog_list = list_box :items => Prog.all, :width => 120, :choose => Conf[:prog] do |list|
+            @prog = list.text
+            changed(list)
+            check_enabled()
+          end
+        end
+
+        flow do
+          para "Platform:        "
+          @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => Conf[:platform]  do |list|
+            # @platform_list = list_box :items => [1,2], :width => 120 do |list|
+            @platform = list.text
+            changed(list)
+            check_enabled()
+          end
+        end
+
+        flow do
+          para "Memory:         "
+          @memory_list = list_box :items => Memory, :width => 120, :choose => Conf[:memory] do |list|
+            @memory = list.text
+            changed(list)
+            check_enabled()
+          end
+        end
+        caption "Read"
+        flow do
+          button "HFUSE" do
+            read_from_chip "hfuse"
+          end
+          button "LFUSE"
+          button "EFUSE"
+          button "LOCK" do
+            dialog
+          end
+        end
+
+      end
+
+      stack :width => '-50%' do
+
+
+        caption "Port:"
+        @game_field = edit_line do
+          check_enabled()
+        end
+      end
+
+    end
+    stack  do
+      caption "Log"
+      button("Clear") { @log.text = "" }
+      @log = para ""
+    end
+
+    # flow :margin_top => 20 do
+    #   @average_score_button = button "Average score", :width => 100, :state => "disabled" do
+    #     game = Game.find(@game_field.text, @platform_list.text)
+    #     @average_score.replace("%.2f - #{game.to_s} (#{game.reviews.size} reviews)" % game.average_score)
+    #   end
+
+    #   @one_line_review_button = button "One line Review", :width => 100, :state => "disabled" do
+    #     review = Random.one_line_review(@game_field.text, @platform_list.text)
+    #     @one_line.replace review
+    #   end
+
+    #   @review_button = button "Review", :width => 100, :state => "disabled" do
+    #     review = Random.review(@game_field.text, @platform_list.text)
+    #     @full_review.replace review.text
+    #   end
+    # end
+  end
+
+  # stack :margin => 20 do
+  #   @average_score = para ""
+  #   @one_line = para ""
+  #   @full_review = para ""
+  # end
+
+  def check_enabled
+    [@one_line_review_button, @review_button, @average_score_button].each do |btn|
+      if @game_field.text.size > 0 and !@platform_list.text.nil?
+        btn.state = nil
+      else
+        btn.state = "disabled"
+      end
+    end
+  end
+end
+
+#   stack :margin => 10 do
+#     button "Start" do
+#       @time = Time.now
+#       @label.replace "Stop watch started at #@time"
+#     end
+#     button "Stop" do
+#       @label.replace "Stopped, ", strong("#{Time.now - @time}"), " seconds elapsed."
+#     end
+#     @label = para "Press ", strong("start"), " to begin timing."
+#   end
+# end
+
