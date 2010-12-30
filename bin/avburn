@@ -1,23 +1,7 @@
 #!/usr/bin/env ruby
 require 'shoes'
-
-Avrdude = "avrdude"
-AvrdudeConf = File.open("/etc/avrdude.conf").read
-Avb = ENV["HOME"] + "/.avb"
-Conf = {}
-
-
-Memory = %w{ eeprom flash fuse efuse hfuse lfuse lock signature fuseN application apptable boot prodsig usersig }
-Format = {
-  :a => "Auto detect",
-  :i => "Intel Hex",
-  :s => "Motorola S-record",
-  :r => "Raw binary",
-  # :m => "Immediate",
-  :d => "Decimal",
-  :h => "Hexadecimal",
-  :o => "Octal",
-  :b => "Binary" }  #todo hash
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+require 'avburn'
 
 
 
@@ -30,10 +14,6 @@ def write_conf
   File.open(Avb, 'w') { |f| f << Conf.to_yaml }
 end
 
-def changed(obj)
-  Conf.merge!({ :platform => @platform, :prog => @prog, :memory => @memory })
-  write_conf
-end
 
 def log(txt)
   @log.text += txt + "\n" #+ @log.text
@@ -51,7 +31,9 @@ ensure
   $stderr = previous_stderr
 end
 
-
+def avr_bool(bit)
+  bit.to_i.zero?
+end
 
 def run_comm(c)
   @log.text = ""
@@ -73,6 +55,17 @@ end
 
 read_conf
 
+def read_fuse(file)
+  name =  file.split("/")[1]
+  data = File.read(file)
+  num  = Integer(data)
+  bits = num.to_s(2).split(//)
+  @fuses_store[name.to_sym] = bits
+  @fuses_store[name + "hex"] = num.to_s(16)
+end
+
+
+
 class Part
   def self.all
     @parts ||= AvrdudeConf.scan(/part\s*\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
@@ -90,7 +83,7 @@ class Prog
   end
 end
 
-Shoes.app :width => 800 do
+Shoes.app :width => 850 do
   background gradient(rgb(245, 245, 245), rgb(190,190,190))
 #  background "#e0e0e0"
 
@@ -115,15 +108,17 @@ Shoes.app :width => 800 do
 
         flow do
           para "Platform:        "
-          @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => Conf[:platform]  do |list|
+          @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => @platform ||= Conf[:platform]  do |list|
             # @platform_list = list_box :items => [1,2], :width => 120 do |list|
             @platform = list.text
             changed(list)
+            reload_fuses()
             check_enabled()
           end
         end
 
         flow do
+
           para "Memory:         "
           @memory_list = list_box :items => Memory, :width => 120, :choose => Conf[:memory] do |list|
             @memory = list.text
@@ -133,11 +128,9 @@ Shoes.app :width => 800 do
         end
         caption "Read"
         flow do
-          button "HFUSE" do
-            read_from_chip "hfuse"
-          end
-          button "LFUSE"
-          button "EFUSE"
+          button("HFUSE") { read_from_chip "hfuse" }
+          button("LFUSE") { read_from_chip "lfuse" }
+          button("EFUSE") { read_from_chip "efuse" }
           button "LOCK" do
             dialog
           end
@@ -147,15 +140,22 @@ Shoes.app :width => 800 do
 
       stack :width => '-50%' do
 
-
-        caption "Port:"
-        @game_field = edit_line do
-          check_enabled()
+        flow do
+          caption "Port:"
+          @game_field = edit_line do
+            check_enabled()
+          end
         end
-      end
 
+      end
     end
-    stack  do
+
+    @fuses = stack do
+    end
+   # print_fuses
+
+
+    stack do
       caption "Log"
       button("Clear") { @log.text = "" }
       @log = para ""
@@ -179,11 +179,71 @@ Shoes.app :width => 800 do
     # end
   end
 
+  def calc_fuses
+
+  end
+
   # stack :margin => 20 do
   #   @average_score = para ""
   #   @one_line = para ""
   #   @full_review = para ""
   # end
+
+  def print_fuses
+    p "printing fuses"
+    p @fuses_store
+    @fuses.clear
+    return unless @platform && fuse_ary = FuseLabel[@platform.to_sym]
+    @fuses.append  do
+      caption "Fuses"
+      [:hfuse, :lfuse].each do |fuse|
+        flow do
+          ftxt = edit_line @fuses_store["#{fuse}hex"], :width => "25px" do |line|
+            data = line.text[0,2]
+            @fuses_store[fuse] = Integer("0x#{data}").to_s(2).split(//)
+            @fuses_store["#{fuse}hex"] = data
+            reload_fuses if data.size > 1
+          end
+          instance_variable_set("@#{fuse}_txt".to_sym, ftxt)
+
+
+          fuse_ary[fuse].each_with_index do |label, i|
+            ch = check :checked => avr_bool(@fuses_store[fuse][i])
+            ch.click do |c|
+              p @fuses_store
+              @fuses_store[fuse][i] = (c.checked? ?  "0" : "1")
+              instance_variable_get("@#{fuse}_txt").text = @fuses_store[fuse].join.to_i(2).to_s(16).upcase
+            end
+
+            para label
+          end
+        end
+      end
+      button("Clear") { @log.text = "" }
+    end
+  end
+
+  def reload_fuses
+    print_fuses
+  end
+
+  def changed(obj)
+    Conf.merge!({ :platform => @platform, :prog => @prog, :memory => @memory })
+    write_conf
+  end
+
+  def read_dir
+    @fuses_store = { }
+
+    Dir['./*'].each do |file|
+      case file
+      when /\wfuse/ then read_fuse(file)
+      when /\.hex/ then add_hex(file)
+      end
+    end
+  end
+  read_dir
+
 
   def check_enabled
     [@one_line_review_button, @review_button, @average_score_button].each do |btn|

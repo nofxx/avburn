@@ -1,0 +1,57 @@
+:attinyx5:
+  :hfuse:
+  - RSTDISBL
+  - DWEN
+  - SPIEN
+  - WDTON
+  - EESAVE
+  - BOOTSZ0
+  - BOOTSZ1
+  - BOOTRST
+  :lfuse:
+  - CKDIB8
+  - CKOUT
+  - SUT1
+  - SUT0
+  - CKSEL0
+  - CKSEL1
+  - CKSEL2
+  - CKSEL3
+:atmega328p:
+  :hfuse:
+  - RSTDISBL
+  - DWEN
+  - SPIEN
+  - WDTON
+  - EESAVE
+  - BOOTSZ0
+  - BOOTSZ1
+  - BOOTRST
+  :lfuse:
+  - CKDIB8
+  - CKOUT
+  - SUT1
+  - SUT0
+  - CKSEL0
+  - CKSEL1
+  - CKSEL2
+  - CKSEL3
+:m32:
+  :hfuse:
+  - OCDEN
+  - JTAGEN
+  - SPIEN
+  - CKOPT
+  - EESAVE
+  - BOOTSZ1
+  - BOOTSZ0
+  - BOOTRST
+  :lfuse:
+  - BODLEVEL
+  - BODEN
+  - SUT1
+  - SUT0
+  - CKSEL0
+  - CKSEL1
+  - CKSEL2
+  - CKSEL3

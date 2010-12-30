@@ -34,9 +34,12 @@ pkg
 #tmtags
 #
 # For emacs:
-#*~
-#\#*
-#.\#*
+*~
+\#*
+.\#*
 #
 # For vim:
 #*.swp
+output
+hfuse
+lfuse
