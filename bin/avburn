@@ -1,5 +1,10 @@
 #!/usr/bin/env shoes
+require 'rubygems'
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+
+# Distribute as rubygem
+exec "shoes #{__FILE__}" unless Object.const_defined? "Shoes"
+
 require 'avburn'
 include Avburn
 
@@ -11,7 +16,6 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
   flow do
     background "#881010"
     # background_gradient(rgb(138, 10, 10), rgb(190,30,30))
-    # image "gamefaqs-logo.gif"
     # title "AVRb", :margin_top => 30, :color => "#ffffff"
     stack :width => '90%' do
       banner "AVbuRn", :margin_left => 15, :margin_top => 17, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
@@ -49,20 +53,22 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             @prog = list.text
             changed(list)
           end
-          para "   Platform:     ", :weight => "bold"
+          para "  Platform:     ", :weight => "bold"
           @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => @platform ||= Conf[:platform]  do |list|
             # @platform_list = list_box :items => [1,2], :width => 120 do |list|
             @platform = list.text
             changed(list)
             print_fuses()
           end
-          para "   Memory:      ", :weight => "bold"
+          para "  Memory:      ", :weight => "bold"
           @memory_list = list_box :items => Memory, :width => 120, :choose => Conf[:memory] do |list|
             @memory = list.text
             changed(list)
           end
           para "     "
+                        image "../lib/avburn/img/burn.png", :margin => 8
           button "Read" do
+
             run_comm "#{@memory}:r:#{@memory}:#{@format||'i'}"
           end
           para "     "
@@ -70,7 +76,6 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             @config_dlg = dialog "Config", :width => 300, :height => 280 do
               flow do
                 background "#881010"
-                # image "gamefaqs-logo.gif"
                 # title "AVRb", :margin_top => 30, :color => "#ffffff"
                 stack :width => '100%' do
                   banner "Config", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
@@ -148,6 +153,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
         @verify_btn = button("Verify", :state => "disabled") { run_hex_comm :v }
         para "    "
         @burn_btn = button("Burn!", :state => "disabled") { run_hex_comm :w }
+        image "../lib/avburn/img/burn.png", :margin => 8
       end
 
       flow do
