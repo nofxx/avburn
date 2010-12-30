@@ -32,6 +32,11 @@ Example:
 cp compiled.hex ~/avb.hex/myproj_atmega328p_16mhz.hex
 
 
+== SS
+
+![SS](https://github.com/nofxx/avburn/raw/master/media/ss.png)
+
+
 
 == Contributing to avburn
 
