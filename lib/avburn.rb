@@ -41,15 +41,22 @@ module Avburn
     bit.to_i.zero?
   end
 
+  def dump_stamp(n)
+    "/tmp/#{n}-#{Time.now.to_i}"
+  end
+
   def run_comm(c)
     @log.text = ""
     comm = "#{Avrdude} -c #{Conf[:prog]} -p #{Conf[:platform]} "
     comm << "-P #{Conf[:port]} " if @port
     comm << "-U #{c}"
     log  "> Running #{comm}"
-    Kernel.system "#{comm} &> output"
-    log File.read("output")
+    Thread.new do
+      Kernel.system "#{comm} &> output"
+      log File.read("output")
+    end
   end
+
 
   class << self
 
@@ -117,3 +124,13 @@ end
 
 
 Avburn.read_conf
+
+
+# class AvrdudeWrapper
+#   attr_accessor :percent
+
+#  def bg_run_comm
+#     @percent = 0.0
+#  end
+
+# end

@@ -4,17 +4,13 @@ require 'avburn'
 include Avburn
 
 
-
-
-
-
 Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
   background gradient(rgb(245, 245, 245), rgb(190,190,190))
   #  background "#e0e0e0"
 
   flow do
     background "#881010"
-   # background_gradient(rgb(138, 10, 10), rgb(190,30,30))
+    # background_gradient(rgb(138, 10, 10), rgb(190,30,30))
     # image "gamefaqs-logo.gif"
     # title "AVRb", :margin_top => 30, :color => "#ffffff"
     stack :width => '90%' do
@@ -52,7 +48,6 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           @prog_list = list_box :items => Prog.all, :width => 120, :choose => Conf[:prog] do |list|
             @prog = list.text
             changed(list)
-            check_enabled()
           end
           para "   Platform:     ", :weight => "bold"
           @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => @platform ||= Conf[:platform]  do |list|
@@ -60,13 +55,11 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             @platform = list.text
             changed(list)
             print_fuses()
-            check_enabled()
           end
           para "   Memory:      ", :weight => "bold"
           @memory_list = list_box :items => Memory, :width => 120, :choose => Conf[:memory] do |list|
             @memory = list.text
             changed(list)
-            check_enabled()
           end
           para "     "
           button "Read" do
@@ -99,35 +92,27 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           end
         end
 
-      # end
-
-      # stack :width => '-50%' do
 
         flow do
           para "    Port:  ", :weight => "bold"
-          @game_field = edit_line do
-            check_enabled()
+          edit_line do
           end
 
           para "   CMD Opts:   ", :weight => "bold"
           @game_field = edit_line do
-            check_enabled()
           end
 
           para "    Format:      ", :weight => "bold"
           @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |list|
             @format = Format.keys[Format.values.index_of(list.text)]
             changed(list)
-            check_enabled()
           end
-
 
         end
 
       end
+
     end
-
-
 
     @fuses = stack :margin_top => 15 do
       caption "Fuses"
@@ -148,18 +133,30 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
       flow do
         para "  Hexfile:   ", :weight => "bold"
         @hex_list = list_box :items => Hex.all, :width => 420, :choose => Conf[:hex] do |list|
-          @hex = list.text
-          changed(list)
-          check_enabled()
+          @hexfile = list.text
+          check_hex_enabled
         end
         para "    "
-        button "Dump"
+        @verify_btn = button("Verify", :state => "disabled") { run_hex_comm :v }
         para "    "
-        button "Verify"
-        para "    "
-        button "Burn!" do
-          run_comm "#{@memory}:w:#{ENV['HOME']}/#{AvbHex}/#{@hex}"
+        @burn_btn = button("Burn!", :state => "disabled") { run_hex_comm :w }
+      end
+
+      flow do
+        para "  Name:   ", :weight => "bold"
+        edit_line :width => 220 do |le|
+          @proj_name = le.text
         end
+        para "    "
+        button "Dump" do
+          ds = dump_stamp(@memory)
+          run_comm "#{@memory}:r:#{ds}:i"
+          data = File.read(ds)
+          filename = "/#{@proj_name}_#{@platform}.hex"
+          File.open(AvbHex + filename) { |f| f << data }
+          @hex_list.items = Hex.all
+        end
+
       end
 
     end
@@ -186,16 +183,9 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
   #
   # Methods
   #
-
-  def calc_fuses
-
+  def run_hex_comm(c)
+    run_comm "#{@memory}:#{c}:#{ENV['HOME']}/#{AvbHex}/#{@hexfile}"
   end
-
-  # stack :margin => 20 do
-  #   @average_score = para ""
-  #   @one_line = para ""
-  #   @full_review = para ""
-  # end
 
   def print_fuses
     @fuses_checks.clear
@@ -209,7 +199,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             print_fuses if line.text.size > 1
           end
           instance_variable_set("@#{fuse}_txt".to_sym, ftxt)
-            all.each_with_index do |label, i|
+          all.each_with_index do |label, i|
 
             lbl = para  label
             ch = check :checked => avr_bool(@fuses_store[fuse][i])
@@ -218,7 +208,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             end
             para "|", :stroke => "#aaa"
             # lbl.click { ch.checked = ch.checked? ? false : true } #TODO nice to click on labels... =/
-            end
+          end
           para " #{@fuses_store[fuse].join.scan(/\d{4}/).join(' ')} "
           button("w") { write_fuse(fuse) }
 
@@ -239,11 +229,9 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
 
   def read_fuse(fuse)
     name =  (fuse =~ /\// ? fuse.split("/")[1] : fuse)
-    p name
     data = File.read(fuse)
     log "Data: #{data}"
     @fuses_store.set(name, Integer(data).to_s(16))
-    p @fuses_store
   end
 
   def write_fuse(fu)
@@ -276,16 +264,10 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
     print_fuses
   end
 
-
-
-  def check_enabled
-    [@one_line_review_button, @review_button, @average_score_button].each do |btn|
-      if @game_field.text.size > 0 and !@platform_list.text.nil?
-        btn.state = nil
-      else
-        btn.state = "disabled"
-      end
-    end
+  def check_hex_enabled
+    state = @hexfile ? nil : "disabled"
+    @verify_btn.state = state
+    @burn_btn.state = state
   end
 end
 
