@@ -2,74 +2,14 @@
 require 'shoes'
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'avburn'
+include Avburn
 
 
 
 
-def log(txt)
-  @log.text += txt + "\n" #+ @log.text
-end
-
-def capture_stderr
-  # The output stream must be an IO-like object. In this case we capture it in
-  # an in-memory IO object so we can return the string value. You can assign any
-  # IO object here.
-  previous_stderr, $stderr = $stderr, StringIO.new
-  yield
-  $stderr.string
-ensure
-  # Restore the previous value of stderr (typically equal to STDERR).
-  $stderr = previous_stderr
-end
-
-def avr_bool(bit)
-  bit.to_i.zero?
-end
-
-def run_comm(c)
-  @log.text = ""
-  comm = "#{Avrdude} -c #{Conf[:prog]} -p #{Conf[:platform]} "
-  comm << "-P #{Conf[:port]} " if @port
-  comm << "-U #{c}"
-  log  "> Running #{comm}"
-  Kernel.system "#{comm} &> output"
-  log File.read("output")
-end
 
 
-
-def read_fuse(file)
-  name =  file.split("/")[1]
-  data = File.read(file)
-  num  = Integer(data)
-  bits = num.to_s(2).split(//)
-  @fuses_store[name.to_sym] = bits
-  @fuses_store[name + "hex"] = num.to_s(16)
-end
-
-def write_fuse(fu)
-  hex = @fuses_store["#{fu}hex"].upcase
-  run_comm "#{fu}:w:#{hex}:m"
-end
-
-class Part
-  def self.all
-    @parts ||= AvrdudeConf.scan(/part\s*\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
-  end
-
-  def self.find(p)
-    puts "search! #{p}"
-  end
-end
-
-
-class Prog
-  def self.all
-    @progs ||= AvrdudeConf.scan(/programmer\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
-  end
-end
-
-Shoes.app :width => 850 do
+Shoes.app :title => "AVbuRn", :width => 1000, :height => 760 do
   background gradient(rgb(245, 245, 245), rgb(190,190,190))
 #  background "#e0e0e0"
 
@@ -77,14 +17,14 @@ Shoes.app :width => 850 do
     background "#252499"
     # image "gamefaqs-logo.gif"
    # title "AVRb", :margin_top => 30, :color => "#ffffff"
-     banner "AVRb", :margin_left => 15, :margin_top => 30, :variant => 'smallcaps', :size => 'large', :stroke => "#fff"
+     banner "AVbuRn", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
   end
 
   stack :margin => 10 do
     flow do
       stack :width => '50%' do
         flow do
-          para "Programmer: "
+          para "Programmer: ", :weight => "bold"
           @prog_list = list_box :items => Prog.all, :width => 120, :choose => Conf[:prog] do |list|
             @prog = list.text
             changed(list)
@@ -93,19 +33,19 @@ Shoes.app :width => 850 do
         end
 
         flow do
-          para "Platform:        "
+          para "Platform:        ", :weight => "bold"
           @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => @platform ||= Conf[:platform]  do |list|
             # @platform_list = list_box :items => [1,2], :width => 120 do |list|
             @platform = list.text
             changed(list)
-            reload_fuses()
+            print_fuses()
             check_enabled()
           end
         end
 
         flow do
 
-          para "Memory:         "
+          para "Memory:         ", :weight => "bold"
           @memory_list = list_box :items => Memory, :width => 120, :choose => Conf[:memory] do |list|
             @memory = list.text
             changed(list)
@@ -132,6 +72,21 @@ Shoes.app :width => 850 do
             check_enabled()
           end
         end
+        flow do
+          caption "CMD Opts:"
+          @game_field = edit_line do
+            check_enabled()
+          end
+        end
+
+        flow do
+          para "Format:         "
+          @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |list|
+            @format = list.text
+            changed(list)
+            check_enabled()
+          end
+        end
 
       end
     end
@@ -140,30 +95,22 @@ Shoes.app :width => 850 do
     end
    # print_fuses
 
-
-    stack do
+    stack(:width => "100%", :height => 350, :scroll => true) do
       caption "Log"
       button("Clear") { @log.text = "" }
       @log = para ""
     end
 
-    # flow :margin_top => 20 do
-    #   @average_score_button = button "Average score", :width => 100, :state => "disabled" do
-    #     game = Game.find(@game_field.text, @platform_list.text)
-    #     @average_score.replace("%.2f - #{game.to_s} (#{game.reviews.size} reviews)" % game.average_score)
-    #   end
+    stack(:width => "100%", :height => 20) do
+      @footer = para "AVRburn v0.1"
+    end
 
-    #   @one_line_review_button = button "One line Review", :width => 100, :state => "disabled" do
-    #     review = Random.one_line_review(@game_field.text, @platform_list.text)
-    #     @one_line.replace review
-    #   end
-
-    #   @review_button = button "Review", :width => 100, :state => "disabled" do
-    #     review = Random.review(@game_field.text, @platform_list.text)
-    #     @full_review.replace review.text
-    #   end
-    # end
   end
+
+  #
+  #
+  # Methods
+  #
 
   def calc_fuses
 
@@ -176,54 +123,64 @@ Shoes.app :width => 850 do
   # end
 
   def print_fuses
-    p "printing fuses"
-    p @fuses_store
     @fuses.clear
     return unless @platform && fuse_ary = FuseLabel[@platform.to_sym]
     @fuses.append  do
       caption "Fuses"
-      [:hfuse, :lfuse].each do |fuse|
+      [:hfuse, :lfuse, :efuse].each do |fuse|
+        next unless all = fuse_ary[fuse]
         flow do
           ftxt = edit_line @fuses_store["#{fuse}hex"], :width => "25px" do |line|
-            data = "0#{data}" if data.size == 1
-            data = line.text[0,2]
-            @fuses_store[fuse] = Integer("0x#{data}").to_s(2).split(//)
-            @fuses_store["#{fuse}hex"] = data
-            reload_fuses if data.size > 1
+            @fuses_store.set(fuse, line.text)
+            print_fuses if line.text.size > 1
           end
           instance_variable_set("@#{fuse}_txt".to_sym, ftxt)
-          button("w") { write_fuse(fuse) }
+            all.each_with_index do |label, i|
 
-
-          fuse_ary[fuse].each_with_index do |label, i|
+            lbl = para  label
             ch = check :checked => avr_bool(@fuses_store[fuse][i])
             ch.click do |c|
-              p "bool click"
-              @fuses_store[fuse][i] = (c.checked? ?  "0" : "1")
-              hexval = @fuses_store[fuse].join.to_i(2).to_s(16).upcase
-              hexval = "0#{hexval}" if hexval.size == 1
-              instance_variable_get("@#{fuse}_txt").text = hexval
+              instance_variable_get("@#{fuse}_txt").text = @fuses_store.set_bit(fuse, i, c.checked?)
             end
+            para "|", :stroke => "#aaa"
+            # lbl.click { ch.checked = ch.checked? ? false : true } #TODO nice to click on labels... =/
+            end
+          para " (#{@fuses_store[fuse].join.scan(/\d{4}/).join(' ')}) "
+          button("w") { write_fuse(fuse) }
 
-            para label
-          end
         end
       end
       # button("Clear") { @log.text = "" }
     end
   end
 
-  def reload_fuses
-    print_fuses
+  def log(txt)
+    @footer.text = txt
+    @log.text += txt + "\n" #+ @log.text
+  end
+
+  def read_fuse(fuse)
+    name =  (fuse =~ /\// ? fuse.split("/")[1] : fuse)
+    p name
+    data = File.read(fuse)
+    log "Data: #{data}"
+    @fuses_store.set(name, Integer(data).to_s(16))
+    p @fuses_store
+  end
+
+  def write_fuse(fu)
+    hex = @fuses_store["#{fu}hex"].upcase
+    run_comm "#{fu}:w:0x#{hex}:m"
   end
 
   def changed(obj)
-    Conf.merge!({ :platform => @platform, :prog => @prog, :memory => @memory })
+    Conf.merge!({ :platform => @platform, :prog => @prog, :memory => @memory, :format => @format })
     Avburn.write_conf
   end
 
   def read_dir
-    @fuses_store = { }
+    @fuses_store = FuseStore.new
+    Fuses.each { |f| @fuses_store.set(f, "FF") }
 
     Dir['./*'].each do |file|
       case file
@@ -235,13 +192,12 @@ Shoes.app :width => 850 do
   read_dir
 
   # #{Conf[:memory]}
-  def read_from_chip(name)
-    run_comm "#{name}:r:#{name}:h"
-    data = File.read(name)
-    log "DATA #{data}"
-    instance_variable_get("@#{fuse}_txt").text = data
-    reload_fuses
+  def read_from_chip(fuse)
+    run_comm "#{fuse}:r:#{fuse}:h"
+    read_fuse(fuse)
+    print_fuses
   end
+
 
 
   def check_enabled

@@ -3,7 +3,7 @@ Avrdude = "avrdude"
 AvrdudeConf = File.open("/etc/avrdude.conf").read
 Avb = ENV["HOME"] + "/.avb"
 Conf = {}
-
+Fuses = [:hfuse, :lfuse, :efuse]
 
 Memory = %w{ eeprom flash fuse efuse hfuse lfuse lock signature fuseN application apptable boot prodsig usersig }
 Format = {
@@ -40,25 +40,31 @@ module Avburn
     bit.to_i.zero?
   end
 
+  def run_comm(c)
+    @log.text = ""
+    comm = "#{Avrdude} -c #{Conf[:prog]} -p #{Conf[:platform]} "
+    comm << "-P #{Conf[:port]} " if @port
+    comm << "-U #{c}"
+    log  "> Running #{comm}"
+    Kernel.system "#{comm} &> output"
+    log File.read("output")
+  end
 
   class << self
 
-def read_conf
-  `touch #{Avb}` unless File.exists?(Avb)
-  Conf.merge! YAML.load(File.read(Avb)) || {}
-end
+    def read_conf
+      `touch #{Avb}` unless File.exists?(Avb)
+      Conf.merge! YAML.load(File.read(Avb)) || {}
+    end
 
-def write_conf
-  File.open(Avb, 'w') { |f| f << Conf.to_yaml }
-end
-
-
+    def write_conf
+      File.open(Avb, 'w') { |f| f << Conf.to_yaml }
+    end
 
   end
 
 
 end
-
 
 class Part
   def self.all
@@ -74,6 +80,29 @@ end
 class Prog
   def self.all
     @progs ||= AvrdudeConf.scan(/programmer\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+  end
+end
+
+class FuseStore < Hash
+  attr_reader :hfuse, :lfuse, :efuse
+
+  def hfuse
+    [:hfuse]
+  end
+
+  def set(fuse, hex)
+    hex = "0#{hex}" if hex.size == 1
+    hex = hex[0,2]
+    self[fuse.to_sym] =  Integer("0x#{hex}").to_s(2).rjust(8, "0").split(//)
+    self["#{fuse}hex"] = hex
+  end
+
+  def set_bit(fuse, bit, bool)
+    self[fuse][bit] = (bool ? "0" : "1")
+    hexval = self[fuse].join.to_i(2).to_s(16).upcase
+    hexval = "0#{hexval}" if hexval.size == 1
+    self["#{fuse}hex"] = hexval
+    hexval
   end
 end
 

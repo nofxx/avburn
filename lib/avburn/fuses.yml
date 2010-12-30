@@ -17,7 +17,7 @@
   - CKSEL1
   - CKSEL2
   - CKSEL3
-:atmega328p:
+:m328p:
   :hfuse:
   - RSTDISBL
   - DWEN
@@ -36,6 +36,11 @@
   - CKSEL1
   - CKSEL2
   - CKSEL3
+  :efuse:
+  - BODLEVEL0
+  - BODLEVEL1
+  - BODLEVEL2
+
 :m32:
   :hfuse:
   - OCDEN
