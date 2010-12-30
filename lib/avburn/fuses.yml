@@ -17,8 +17,53 @@
   - CKSEL1
   - CKSEL2
   - CKSEL3
-:m328p:
+
+:atmega8:
   :hfuse:
+  - RSTDISBL
+  - WDTON
+  - SPIEN
+  - CKOPT
+  - EESAVE
+  - BOOTSZ1
+  - BOOTSZ0
+  - BOOTRST
+  :lfuse:
+  - BODLEVEL
+  - BODEN
+  - SUT1
+  - SUT0
+  - CKSEL0
+  - CKSEL1
+  - CKSEL2
+  - CKSEL3
+
+:atmega88:
+  :hfuse:
+  - RSTDISBL
+  - DWEN
+  - SPIEN
+  - WDTON
+  - EESAVE
+  - BODLEVEL0
+  - BODLEVEL1
+  - BODLEVEL2
+  :lfuse:
+  - CKDIV8
+  - CKOUT
+  - SUT1
+  - SUT0
+  - CKSEL0
+  - CKSEL1
+  - CKSEL2
+  - CKSEL3
+  :efuse:
+  - BOOTSZ1
+  - BOOTSZ0
+  - BOOTRST
+
+:m328p:
+  :hfuse: &328hfuse
   - RSTDISBL
   - DWEN
   - SPIEN
@@ -27,15 +72,15 @@
   - BOOTSZ0
   - BOOTSZ1
   - BOOTRST
-  :lfuse:
-  - CKDIB8
+  :lfuse: &328lfuse
+  - CKDIV8
   - CKOUT
   - SUT1
   - SUT0
-  - CKSEL0
-  - CKSEL1
-  - CKSEL2
   - CKSEL3
+  - CKSEL2
+  - CKSEL1
+  - CKSEL0
   :efuse:
   - BODLEVEL0
   - BODLEVEL1
@@ -56,7 +101,7 @@
   - BODEN
   - SUT1
   - SUT0
-  - CKSEL0
-  - CKSEL1
-  - CKSEL2
   - CKSEL3
+  - CKSEL2
+  - CKSEL1
+  - CKSEL0

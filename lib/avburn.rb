@@ -2,6 +2,7 @@
 Avrdude = "avrdude"
 AvrdudeConf = File.open("/etc/avrdude.conf").read
 Avb = ENV["HOME"] + "/.avb"
+AvbHex = Avb + ".hex"
 Conf = {}
 Fuses = [:hfuse, :lfuse, :efuse]
 
@@ -73,6 +74,14 @@ class Part
 
   def self.find(p)
     puts "search! #{p}"
+  end
+end
+
+class Hex
+
+  def self.all
+    `mkdir ~/.avb.hex` unless File.exists?(AvbHex)
+     Dir[AvbHex + "/*.hex"].map { |fp| fp.split("/")[-1] }
   end
 end
 

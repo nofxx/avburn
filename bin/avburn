@@ -1,5 +1,4 @@
-#!/usr/bin/env ruby
-require 'shoes'
+#!/usr/bin/env shoes
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'avburn'
 include Avburn
@@ -9,31 +8,52 @@ include Avburn
 
 
 
-Shoes.app :title => "AVbuRn", :width => 1000, :height => 760 do
+Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
   background gradient(rgb(245, 245, 245), rgb(190,190,190))
-#  background "#e0e0e0"
+  #  background "#e0e0e0"
 
   flow do
     background "#252499"
     # image "gamefaqs-logo.gif"
-   # title "AVRb", :margin_top => 30, :color => "#ffffff"
-     banner "AVbuRn", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
+    # title "AVRb", :margin_top => 30, :color => "#ffffff"
+    stack :width => '90%' do
+      banner "AVbuRn", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
+    end
+    stack :margin_top => 20, :width => '-10%' do
+      @fuse_stack = stack do
+        @fuse_btn = button("FUSE") do |btn|
+          @fuse_stack.hide
+          @hex_stack.show
+
+          @hex.hide
+          @fuses.show
+        end
+      end
+      @fuse_stack.hide
+      @hex_stack = stack do
+        #  @fuse_btn.toggle
+        @hex_btn = button("HEX") do |btn|
+          @fuse_stack.show
+          @hex_stack.hide
+          @hex.show
+          @fuses.hide
+        end
+      end
+    end
   end
 
-  stack :margin => 10 do
+  stack :margin => 10, :margin_top => 2 do
     flow do
-      stack :width => '50%' do
-        flow do
-          para "Programmer: ", :weight => "bold"
+      stack do #:width => '50%' do
+        border "#fff"
+        flow  do
+          para "  Programmer:   ", :weight => "bold"
           @prog_list = list_box :items => Prog.all, :width => 120, :choose => Conf[:prog] do |list|
             @prog = list.text
             changed(list)
             check_enabled()
           end
-        end
-
-        flow do
-          para "Platform:        ", :weight => "bold"
+          para "   Platform:     ", :weight => "bold"
           @platform_list = list_box :items => Part.all, :text => "Select..", :width => 120, :choose => @platform ||= Conf[:platform]  do |list|
             # @platform_list = list_box :items => [1,2], :width => 120 do |list|
             @platform = list.text
@@ -41,64 +61,110 @@ Shoes.app :title => "AVbuRn", :width => 1000, :height => 760 do
             print_fuses()
             check_enabled()
           end
-        end
-
-        flow do
-
-          para "Memory:         ", :weight => "bold"
+          para "   Memory:      ", :weight => "bold"
           @memory_list = list_box :items => Memory, :width => 120, :choose => Conf[:memory] do |list|
             @memory = list.text
             changed(list)
             check_enabled()
           end
-        end
-        caption "Read"
-        flow do
-          button("HFUSE") { read_from_chip "hfuse" }
-          button("LFUSE") { read_from_chip "lfuse" }
-          button("EFUSE") { read_from_chip "efuse" }
-          button "LOCK" do
-            dialog
+          para "     "
+          button "Read"
+          para "     "
+          button "Config" do
+            dialog "foo" do
+              flow do
+                background "#252499"
+                # image "gamefaqs-logo.gif"
+                # title "AVRb", :margin_top => 30, :color => "#ffffff"
+                stack :width => '100%' do
+                  banner "Config", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
+                end
+              end
+              stack do
+                flow { check; para "Disable auto erase for flash" }
+                flow { check; para "Override invalid signature check" }
+                flow { check; para "Perform chip erase" }
+                flow { check; para "Do not verify" }
+              end
+              flow do
+                button "Cancel"
+                button "Save"
+              end
+
+            end
+
           end
         end
 
-      end
+      # end
 
-      stack :width => '-50%' do
+      # stack :width => '-50%' do
 
         flow do
-          caption "Port:"
+          para "    Port:  ", :weight => "bold"
           @game_field = edit_line do
             check_enabled()
           end
-        end
-        flow do
-          caption "CMD Opts:"
+
+          para "   CMD Opts:   ", :weight => "bold"
           @game_field = edit_line do
             check_enabled()
           end
-        end
 
-        flow do
-          para "Format:         "
+          para "    Format:      ", :weight => "bold"
           @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |list|
             @format = list.text
             changed(list)
             check_enabled()
           end
+
+
         end
 
       end
     end
 
-    @fuses = stack do
-    end
-   # print_fuses
 
-    stack(:width => "100%", :height => 350, :scroll => true) do
-      caption "Log"
-      button("Clear") { @log.text = "" }
-      @log = para ""
+
+    @fuses = stack :margin_top => 15 do
+      caption "Fuses"
+      flow do
+        button("HFUSE") { read_from_chip "hfuse" }
+        button("LFUSE") { read_from_chip "lfuse" }
+        button("EFUSE") { read_from_chip "efuse" }
+        button "LOCK" do
+          dialog
+        end
+      end
+
+      @fuses_checks = stack(:margin_top => 20) { }
+    end
+
+    @hex = stack :margit_top => 15 do
+      caption "HEX"
+      flow do
+        para "  Hexfile:   ", :weight => "bold"
+        @hex_list = list_box :items => Hex.all, :width => 420, :choose => Conf[:hex] do |list|
+          @hex = list.text
+          changed(list)
+          check_enabled()
+        end
+        para "    "
+        button "Verify"
+        para "    "
+        button "Burn!"
+      end
+
+    end
+    @hex.hide
+    # print_fuses
+
+    stack(:margin_top => 20, :width => "100%", :height => 350, :scroll => true) do
+      flow do
+        caption "Log"
+        button("Clear") { @log.text = "" }
+      end
+      @log = para "", :family => "Inconsolata;monospace;monospaced"
     end
 
     stack(:width => "100%", :height => 20) do
@@ -123,10 +189,9 @@ Shoes.app :title => "AVbuRn", :width => 1000, :height => 760 do
   # end
 
   def print_fuses
-    @fuses.clear
+    @fuses_checks.clear
     return unless @platform && fuse_ary = FuseLabel[@platform.to_sym]
-    @fuses.append  do
-      caption "Fuses"
+    @fuses_checks.append  do
       [:hfuse, :lfuse, :efuse].each do |fuse|
         next unless all = fuse_ary[fuse]
         flow do
@@ -145,13 +210,17 @@ Shoes.app :title => "AVbuRn", :width => 1000, :height => 760 do
             para "|", :stroke => "#aaa"
             # lbl.click { ch.checked = ch.checked? ? false : true } #TODO nice to click on labels... =/
             end
-          para " (#{@fuses_store[fuse].join.scan(/\d{4}/).join(' ')}) "
+          para " #{@fuses_store[fuse].join.scan(/\d{4}/).join(' ')} "
           button("w") { write_fuse(fuse) }
 
         end
       end
       # button("Clear") { @log.text = "" }
     end
+  end
+
+  def toggle_mode
+    @toggle_btn.text = @toggle_btn.text == "HEX" ? "FUSES" : "HEX"
   end
 
   def log(txt)
