@@ -5,15 +5,6 @@ require 'avburn'
 
 
 
-def read_conf
-  `touch #{Avb}` unless File.exists?(Avb)
-  Conf.merge! YAML.load(File.read(Avb)) || {}
-end
-
-def write_conf
-  File.open(Avb, 'w') { |f| f << Conf.to_yaml }
-end
-
 
 def log(txt)
   @log.text += txt + "\n" #+ @log.text
@@ -45,15 +36,7 @@ def run_comm(c)
   log File.read("output")
 end
 
-# #{Conf[:memory]}
-def read_from_chip(name)
-  run_comm "#{name}:r:#{name}:h"
-  data = File.read(name)
-  log "DATA #{data}"
-end
 
-
-read_conf
 
 def read_fuse(file)
   name =  file.split("/")[1]
@@ -64,7 +47,10 @@ def read_fuse(file)
   @fuses_store[name + "hex"] = num.to_s(16)
 end
 
-
+def write_fuse(fu)
+  hex = @fuses_store["#{fu}hex"].upcase
+  run_comm "#{fu}:w:#{hex}:m"
+end
 
 class Part
   def self.all
@@ -199,27 +185,31 @@ Shoes.app :width => 850 do
       [:hfuse, :lfuse].each do |fuse|
         flow do
           ftxt = edit_line @fuses_store["#{fuse}hex"], :width => "25px" do |line|
+            data = "0#{data}" if data.size == 1
             data = line.text[0,2]
             @fuses_store[fuse] = Integer("0x#{data}").to_s(2).split(//)
             @fuses_store["#{fuse}hex"] = data
             reload_fuses if data.size > 1
           end
           instance_variable_set("@#{fuse}_txt".to_sym, ftxt)
+          button("w") { write_fuse(fuse) }
 
 
           fuse_ary[fuse].each_with_index do |label, i|
             ch = check :checked => avr_bool(@fuses_store[fuse][i])
             ch.click do |c|
-              p @fuses_store
+              p "bool click"
               @fuses_store[fuse][i] = (c.checked? ?  "0" : "1")
-              instance_variable_get("@#{fuse}_txt").text = @fuses_store[fuse].join.to_i(2).to_s(16).upcase
+              hexval = @fuses_store[fuse].join.to_i(2).to_s(16).upcase
+              hexval = "0#{hexval}" if hexval.size == 1
+              instance_variable_get("@#{fuse}_txt").text = hexval
             end
 
             para label
           end
         end
       end
-      button("Clear") { @log.text = "" }
+      # button("Clear") { @log.text = "" }
     end
   end
 
@@ -229,7 +219,7 @@ Shoes.app :width => 850 do
 
   def changed(obj)
     Conf.merge!({ :platform => @platform, :prog => @prog, :memory => @memory })
-    write_conf
+    Avburn.write_conf
   end
 
   def read_dir
@@ -243,6 +233,15 @@ Shoes.app :width => 850 do
     end
   end
   read_dir
+
+  # #{Conf[:memory]}
+  def read_from_chip(name)
+    run_comm "#{name}:r:#{name}:h"
+    data = File.read(name)
+    log "DATA #{data}"
+    instance_variable_get("@#{fuse}_txt").text = data
+    reload_fuses
+  end
 
 
   def check_enabled

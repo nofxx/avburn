@@ -31,11 +31,51 @@ FuseLabel = YAML.load(File.read(File.dirname(__FILE__) + "/avburn/fuses.yml"))
 #     :lfuse => %w{BODLEVEL BODEN SUT1 SUT0 CKSEL0 CKSEL1 CKSEL2 CKSEL3}
 #   }
 
+
 # }
 
 
 module Avburn
+  def avr_bool(bit)
+    bit.to_i.zero?
+  end
 
+
+  class << self
+
+def read_conf
+  `touch #{Avb}` unless File.exists?(Avb)
+  Conf.merge! YAML.load(File.read(Avb)) || {}
+end
+
+def write_conf
+  File.open(Avb, 'w') { |f| f << Conf.to_yaml }
+end
+
+
+
+  end
 
 
 end
+
+
+class Part
+  def self.all
+    @parts ||= AvrdudeConf.scan(/part\s*\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+  end
+
+  def self.find(p)
+    puts "search! #{p}"
+  end
+end
+
+
+class Prog
+  def self.all
+    @progs ||= AvrdudeConf.scan(/programmer\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+  end
+end
+
+
+Avburn.read_conf
