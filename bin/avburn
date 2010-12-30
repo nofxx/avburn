@@ -13,13 +13,14 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
   #  background "#e0e0e0"
 
   flow do
-    background "#252499"
+    background "#881010"
+   # background_gradient(rgb(138, 10, 10), rgb(190,30,30))
     # image "gamefaqs-logo.gif"
     # title "AVRb", :margin_top => 30, :color => "#ffffff"
     stack :width => '90%' do
-      banner "AVbuRn", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
+      banner "AVbuRn", :margin_left => 15, :margin_top => 17, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
     end
-    stack :margin_top => 20, :width => '-10%' do
+    stack :margin_top => 17, :width => '-5%' do
       @fuse_stack = stack do
         @fuse_btn = button("FUSE") do |btn|
           @fuse_stack.hide
@@ -68,7 +69,9 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             check_enabled()
           end
           para "     "
-          button "Read"
+          button "Read" do
+            run_comm "#{@memory}:r:#{@memory}:#{@format||'i'}"
+          end
           para "     "
           button "Config" do
             dialog "foo" do
@@ -113,7 +116,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
 
           para "    Format:      ", :weight => "bold"
           @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |list|
-            @format = list.text
+            @format = Format.keys[Format.values.index_of(list.text)]
             changed(list)
             check_enabled()
           end
@@ -150,9 +153,13 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           check_enabled()
         end
         para "    "
+        button "Dump"
+        para "    "
         button "Verify"
         para "    "
-        button "Burn!"
+        button "Burn!" do
+          run_comm "#{@memory}:w:#{ENV['HOME']}/#{AvbHex}/#{@hex}"
+        end
       end
 
     end
@@ -167,7 +174,9 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
       @log = para "", :family => "Inconsolata;monospace;monospaced"
     end
 
-    stack(:width => "100%", :height => 20) do
+    flow(:width => "100%") do
+      background "#777"
+
       @footer = para "AVRburn v0.1"
     end
 
