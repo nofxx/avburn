@@ -48,10 +48,16 @@ module Avburn
   def run_comm(c)
     @log.text = ""
     comm = "#{Avrdude} -c #{Conf[:prog]} -p #{Conf[:platform]} "
-    comm << "-P #{Conf[:port]} " if @port
-    comm << "-U #{c}"
+    comm << "-P #{@port} " if @port
+    comm << "#{@cmd_opts} -U #{c}"
     log  "> Running #{comm}"
-    Thread.new do
+    if block_given?
+      Thread.new do
+        Kernel.system "#{comm} &> output"
+        log File.read("output")
+        yield
+      end
+    else
       Kernel.system "#{comm} &> output"
       log File.read("output")
     end

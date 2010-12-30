@@ -67,26 +67,32 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           end
           para "     "
           button "Config" do
-            dialog "foo" do
+            @config_dlg = dialog "Config", :width => 300, :height => 280 do
               flow do
-                background "#252499"
+                background "#881010"
                 # image "gamefaqs-logo.gif"
                 # title "AVRb", :margin_top => 30, :color => "#ffffff"
                 stack :width => '100%' do
                   banner "Config", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
                 end
               end
-              stack do
-                flow { check; para "Disable auto erase for flash" }
+              stack :margin => 15 do
+                flow do
+                  ch = check :checked => @erase_flash
+                  ch.click do |c|
+                    @erase_flash = c.checked?
+                  end
+                  para "Disable auto erase for flash"
+                end
                 flow { check; para "Override invalid signature check" }
                 flow { check; para "Perform chip erase" }
                 flow { check; para "Do not verify" }
               end
-              flow do
-                button "Cancel"
-                button "Save"
+              stack :margin_left => 110 do
+                button "Close" do
+                  close
+                end
               end
-
             end
 
           end
@@ -95,11 +101,13 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
 
         flow do
           para "    Port:  ", :weight => "bold"
-          edit_line do
+          edit_line do |l|
+            @port = l.text
           end
 
           para "   CMD Opts:   ", :weight => "bold"
-          @game_field = edit_line do
+          edit_line do |l|
+            @cmd_opts = l.text
           end
 
           para "    Format:      ", :weight => "bold"
@@ -148,13 +156,16 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           @proj_name = le.text
         end
         para "    "
-        button "Dump" do
-          ds = dump_stamp(@memory)
-          run_comm "#{@memory}:r:#{ds}:i"
-          data = File.read(ds)
-          filename = "/#{@proj_name}_#{@platform}.hex"
-          File.open(AvbHex + filename) { |f| f << data }
-          @hex_list.items = Hex.all
+        button "Dump" do |btn|
+          btn.state = "Disabled"
+          Thread.new do
+            ds = dump_stamp(@memory)
+            run_comm "#{@memory}:r:#{ds}:i"
+            data = File.read(ds)
+            filename = "/#{@proj_name}_#{@platform}.hex"
+            File.open(AvbHex + filename, "w") { |f| f << data }
+            @hex_list.items = Hex.all
+          end
         end
 
       end
@@ -223,7 +234,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
   end
 
   def log(txt)
-    @footer.text = txt
+    @footer.text = txt.split("\n")[-1]
     @log.text += txt + "\n" #+ @log.text
   end
 
