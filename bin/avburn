@@ -65,10 +65,9 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             @memory = list.text
             changed(list)
           end
-          para "     "
-                        image "../lib/avburn/img/burn.png", :margin => 8
-          button "Read" do
 
+          image "../lib/avburn/img/down.png", :margin => 7
+          button "Read" do
             run_comm "#{@memory}:r:#{@memory}:#{@format||'i'}"
           end
           para "     "
@@ -142,9 +141,10 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
     end
 
     @hex = stack :margit_top => 15 do
-      caption "HEX"
+      caption "Burn"
       flow do
-        para "  Hexfile:   ", :weight => "bold"
+        image "../lib/avburn/img/hex.png", :margin => 7
+        para "Hexfile:   ", :weight => "bold"
         @hex_list = list_box :items => Hex.all, :width => 420, :choose => Conf[:hex] do |list|
           @hexfile = list.text
           check_hex_enabled
@@ -156,6 +156,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
         image "../lib/avburn/img/burn.png", :margin => 8
       end
 
+      caption "Dump"
       flow do
         para "  Name:   ", :weight => "bold"
         edit_line :width => 220 do |le|
@@ -180,20 +181,25 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
     @hex.hide
     # print_fuses
 
-    stack(:margin_top => 20, :width => "100%", :height => 350, :scroll => true) do
+    stack(:margin_top => 20, :width => "100%", :height => 360, :scroll => true) do
       flow do
-        caption "Log"
+        caption "Log    "
         button("Clear") { @log.text = "" }
       end
       @log = para "", :family => "Inconsolata;monospace;monospaced"
     end
 
-    flow(:width => "100%") do
-      background "#777"
+    flow do
+      flow(:width => "5%", :margin => 10) do
+        @status = flow {}
 
-      @footer = para "AVRburn v0.1"
+      end
+      flow(:width => "-90%") do
+        background "#ccc"
+
+        @footer = para "AVRburn v0.1"
+      end
     end
-
   end
 
   #

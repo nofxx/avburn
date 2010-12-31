@@ -58,9 +58,17 @@ module Avburn
         yield
       end
     else
-      Kernel.system "#{comm} &> output"
+      set_footer Kernel.system "#{comm} &> output"
       log File.read("output")
     end
+  end
+
+  def set_footer bool
+    p "OUT #{bool}"
+    img = bool ? "tick" : "err"
+    @status.clear
+    @status.append { image("../lib/avburn/img/#{img}.png") }
+
   end
 
 
