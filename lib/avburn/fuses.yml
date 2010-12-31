@@ -85,6 +85,13 @@
   - BODLEVEL0
   - BODLEVEL1
   - BODLEVEL2
+  :lock: &lock
+    - LB1
+    - LB2
+    - BLB01
+    - BLB02
+    - BLB11
+    - BLB12
 
 :m32:
   :hfuse:
@@ -105,3 +112,5 @@
   - CKSEL2
   - CKSEL1
   - CKSEL0
+  :lock: *lock
+

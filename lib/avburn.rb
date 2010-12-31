@@ -3,8 +3,9 @@ Avrdude = "avrdude"
 AvrdudeConf = File.open("/etc/avrdude.conf").read
 Avb = ENV["HOME"] + "/.avb"
 AvbHex = Avb + ".hex"
+AvbFuse = Avb + ".fuse"
 Conf = {}
-Fuses = [:hfuse, :lfuse, :efuse]
+Fuses = [:hfuse, :lfuse, :efuse, :lock]
 LastComm = "/tmp/avrdude"
 
 Memory = %w{ eeprom flash fuse efuse hfuse lfuse lock signature fuseN application apptable boot prodsig usersig }
@@ -56,6 +57,9 @@ module Avburn
     comm << "-e " if Conf[:chip_erase]
     comm << "#{@cmd_opts} -U #{c}"
     log  "> Running #{comm}"
+    @status.clear
+    @status.append { image("../lib/avburn/img/clock.png") }
+
     if block_given?
       Thread.new do
         run_n_log(comm)
@@ -67,7 +71,6 @@ module Avburn
   end
 
   def set_footer bool
-    p "OUT #{bool}"
     img = bool ? "tick" : "err"
     @status.clear
     @status.append { image("../lib/avburn/img/#{img}.png") }
@@ -96,7 +99,7 @@ end
 
 class Part
   def self.all
-    @parts ||= AvrdudeConf.scan(/part\s*\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+    @parts ||= AvrdudeConf.scan(/part\s*\n\s*id\s*=\s*"(\w*)"\s*;/).flatten.sort
   end
 
   def self.find(p)
@@ -108,14 +111,25 @@ class Hex
 
   def self.all
     `mkdir ~/.avb.hex` unless File.exists?(AvbHex)
-     Dir[AvbHex + "/*.hex"].map { |fp| fp.split("/")[-1] }
+    Dir[AvbHex + "/*.hex"].map { |fp| fp.split("/")[-1] }
   end
+
+end
+
+class Fuse
+
+  def self.all
+    `mkdir ~/.avb.fuse` unless File.exists?(AvbFuse)
+    Dir[AvbFuse + "/*.yml"].map { |fp| fp.split("/")[-1] }
+  end
+
+
 end
 
 
 class Prog
   def self.all
-    @progs ||= AvrdudeConf.scan(/programmer\n\s*id\s*=\s*"(\w*)"\s*;/).flatten
+    @progs ||= AvrdudeConf.scan(/programmer\n\s*id\s*=\s*"(\w*)"\s*;/).flatten.sort
   end
 end
 
