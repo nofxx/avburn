@@ -70,7 +70,8 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           button "Read" do
             run_comm "#{@memory}:r:#{@memory}:#{@format||'i'}"
           end
-          para "     "
+          para "   "
+          image "../lib/avburn/img/wrench.png", :margin => 7
           button "Config" do
             @config_dlg = dialog "Config", :width => 300, :height => 280 do
               flow do
@@ -81,16 +82,19 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
                 end
               end
               stack :margin => 15 do
-                flow do
-                  ch = check :checked => @erase_flash
-                  ch.click do |c|
-                    @erase_flash = c.checked?
+                {
+                  :dont_erase_flash => "Disable auto erase for flash",
+                  :override_sig => "Override invalid signature check",
+                  :chip_erase => "Perform chip erase",
+                  :no_verify => "Do not verify"
+                }.each do |key, val|
+                  flow do
+                    ch = check :checked => Conf[key]
+                    ch.click { |c| Conf[key] = c.checked?; Avburn.write_conf }
+                    para val
                   end
-                  para "Disable auto erase for flash"
                 end
-                flow { check; para "Override invalid signature check" }
-                flow { check; para "Perform chip erase" }
-                flow { check; para "Do not verify" }
+
               end
               stack :margin_left => 110 do
                 button "Close" do
@@ -115,9 +119,11 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
           end
 
           para "    Format:      ", :weight => "bold"
-          @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |list|
-            @format = Format.keys[Format.values.index_of(list.text)]
-            changed(list)
+          @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |l|
+            p "bla"
+            @format = Format.keys[Format.values.index(l.text)]
+            changed(l)
+            p @format
           end
 
         end
@@ -143,8 +149,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
     @hex = stack :margit_top => 15 do
       caption "Burn"
       flow do
-        image "../lib/avburn/img/hex.png", :margin => 7
-        para "Hexfile:   ", :weight => "bold"
+        para "  Hexfile:   ", :weight => "bold"
         @hex_list = list_box :items => Hex.all, :width => 420, :choose => Conf[:hex] do |list|
           @hexfile = list.text
           check_hex_enabled
@@ -174,6 +179,7 @@ Shoes.app :title => "AVbuRn", :width => 980, :height => 730 do
             @hex_list.items = Hex.all
           end
         end
+        image "../lib/avburn/img/hex.png", :margin => 7
 
       end
 

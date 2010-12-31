@@ -5,6 +5,7 @@ Avb = ENV["HOME"] + "/.avb"
 AvbHex = Avb + ".hex"
 Conf = {}
 Fuses = [:hfuse, :lfuse, :efuse]
+LastComm = "/tmp/avrdude"
 
 Memory = %w{ eeprom flash fuse efuse hfuse lfuse lock signature fuseN application apptable boot prodsig usersig }
 Format = {
@@ -49,17 +50,19 @@ module Avburn
     @log.text = ""
     comm = "#{Avrdude} -c #{Conf[:prog]} -p #{Conf[:platform]} "
     comm << "-P #{@port} " if @port
+    comm << "-V " if Conf[:no_verify]
+    comm << "-F " if Conf[:override_sig]
+    comm << "-D " if Conf[:dont_erase_flash]
+    comm << "-e " if Conf[:chip_erase]
     comm << "#{@cmd_opts} -U #{c}"
     log  "> Running #{comm}"
     if block_given?
       Thread.new do
-        Kernel.system "#{comm} &> output"
-        log File.read("output")
+        run_n_log(comm)
         yield
       end
     else
-      set_footer Kernel.system "#{comm} &> output"
-      log File.read("output")
+      run_n_log(comm)
     end
   end
 
@@ -68,9 +71,12 @@ module Avburn
     img = bool ? "tick" : "err"
     @status.clear
     @status.append { image("../lib/avburn/img/#{img}.png") }
-
   end
 
+  def run_n_log(comm)
+    set_footer Kernel.system "#{comm} &> #{LastComm}"
+    log File.read(LastComm)
+  end
 
   class << self
 
