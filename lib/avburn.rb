@@ -55,7 +55,7 @@ module Avburn
     comm << "-F " if Conf[:override_sig]
     comm << "-D " if Conf[:dont_erase_flash]
     comm << "-e " if Conf[:chip_erase]
-    comm << "#{@cmd_opts} -U #{c}"
+    comm << "#{@cmd_opts} #{'-U' unless c =~ /-U/} #{c}"
     log  "> Running #{comm}"
     @status.clear
     @status.append { image("../lib/avburn/img/clock.png") }

@@ -284,7 +284,11 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
       Fuses.each do |fuse|
         next unless all = fuse_ary[fuse]
         flow do
-          button("w") { write_fuse(fuse) }
+          cw = check
+          cw.click do |c|
+            @write_fuses[fuse] = c.checked?
+          end
+
           button("r") { read_from_chip fuse }
           ftxt = edit_line @fuses_store["#{fuse}hex"], :width => "25px" do |line|
             @fuses_store.set(fuse, line.text)
@@ -307,6 +311,7 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
 
         end
       end
+      button("Write Marked") { write_fuses }
       # button("Clear") { @log.text = "" }
     end
   end
@@ -320,10 +325,15 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
     @log.text += txt + "\n" #+ @log.text
   end
 
-  def write_fuse(fu)
-    hex = @fuses_store["#{fu}hex"].upcase
-    comm = "#{fu}:w:0x#{hex}:m"
-    run_comm comm if confirm("Command: #{comm}")
+  def write_fuses
+    comm = ""
+    @write_fuses.each do |fuse, w|
+      next unless w
+      hex = @fuses_store["#{fuse}hex"].upcase
+      comm << "-U #{fuse}:w:0x#{hex}:m "
+    end
+    return if comm.empty?
+    run_comm comm if confirm("Execute #{comm}")
   end
 
   def changed(obj)
@@ -333,6 +343,7 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
 
   def read_dir
     @fuses_store = FuseStore.new
+    @write_fuses ||= {}
     Fuses.each { |f| @fuses_store.set(f, "FF") }
 
     # Dir['./*'].each do |file|
