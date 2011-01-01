@@ -111,7 +111,7 @@ class Hex
 
   def self.all
     `mkdir ~/.avb.hex` unless File.exists?(AvbHex)
-    Dir[AvbHex + "/*.hex"].map { |fp| fp.split("/")[-1] }
+    Dir[AvbHex + "/*.hex"].map { |fp| fp.split("/")[-1] }.sort
   end
 
 end
@@ -120,7 +120,7 @@ class Fuse
 
   def self.all
     `mkdir ~/.avb.fuse` unless File.exists?(AvbFuse)
-    Dir[AvbFuse + "/*.yml"].map { |fp| fp.split("/")[-1] }
+    Dir[AvbFuse + "/*.yml"].map { |fp| fp.split("/")[-1] }.sort
   end
 
 

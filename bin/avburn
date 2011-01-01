@@ -68,9 +68,10 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
 
           image "../lib/avburn/img/down.png", :margin => 7
           button "Read" do
-            run_comm "#{@memory}:r:#{@memory}:#{@format||'i'}"
+            fname = ask_save_file
+            run_comm "#{@memory}:r:#{fname}:#{@format||'i'}"
           end
-          para "   "
+          para "           "
           image "../lib/avburn/img/wrench.png", :margin => 7
           button "Config" do
             @config_dlg = dialog "Config", :width => 300, :height => 280 do
@@ -120,18 +121,40 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
 
           para "    Format:      ", :weight => "bold"
           @format_list = list_box :items => Format.values, :width => 120, :choose => Conf[:format] do |l|
-            p "bla"
             @format = Format.keys[Format.values.index(l.text)]
             changed(l)
-            p @format
+          end
+
+          para "                          "
+          button "About" do
+            @config_dlg = dialog "About", :width => 300, :height => 280 do
+              flow do
+                background "#881010"
+                # title "AVRb", :margin_top => 30, :color => "#ffffff"
+                stack :width => '100%' do
+                  banner "About", :margin_left => 15, :margin_top => 20, :variant => 'smallcaps', :size => 'large', :stroke => "#fff", :weight => "bold"
+                end
+              end
+              stack :margin => 15 do
+                para "AVbuRn version v0.2", :weight => "bold", :align => "center"
+                para "http://github.com/nofxx/avburn", :align => "center"
+                para "Running with shoes! Ruby #{RUBY_VERSION}"
+                link "Source", :click => lambda { visit "http://github.com"  }
+              end
+              stack :margin_left => 110 do
+                button "Close" do
+                  close
+                end
+              end
+
+            end
+
           end
 
         end
 
       end
-
     end
-
 
     @fuses = stack :margin_top => 8 do
       flow do
@@ -185,21 +208,21 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
         para "    "
         @verify_btn = button("Verify", :state => "disabled") { run_hex_comm :v }
         para "    "
-        @burn_btn = button("Burn!", :state => "disabled") { run_hex_comm :w }
+        @burn_btn = button("Burn!", :state => "disabled") { run_hex_comm :w if confirm("Burn Hex to Chip?") }
       end
 
       flow :margin_top => 25 do
         flow do
           image "../lib/avburn/img/hex.png", :margin => 5
-          caption "Dump"
+          caption "Add Hex"
         end
         para "  Name:   ", :weight => "bold"
-        edit_line :width => 220 do |le|
+        @name_edit = edit_line :width => 220 do |le|
           @proj_name = le.text
-          @dump_btn.state =  le.text.size > 0 ? nil : "disabled"
+          @dump_btn.state = @file_btn.state =  le.text.size > 0 ? nil : "disabled"
         end
         para "    "
-        @dump_btn = button "Dump", :state => "disabled" do |btn|
+        @dump_btn = button "From Chip", :state => "disabled" do |btn|
           btn.state = "disabled"
           Thread.new do
             ds = dump_stamp(@memory)
@@ -208,11 +231,15 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
             filename = "/#{@proj_name}_#{@platform}_#{@memory}.hex"
             File.open(AvbHex + filename, "w") { |f| f << data }
             @hex_list.items = Hex.all
-            @dump_btn.state = nil
-
           end
         end
-
+        para "    "
+        @file_btn = button "From File", :state => "disabled" do |btn|
+          file = ask_open_file
+          File.open(AvbHex + "/#{@proj_name}.hex", "w") { |f| f << File.read(file) }
+          @hex_list.items = Hex.all
+          @name_edit.text = ""
+        end
       end
 
     end
@@ -264,8 +291,9 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
             print_fuses if line.text.size > 1
           end
           instance_variable_set("@#{fuse}_txt".to_sym, ftxt)
+          all.unshift nil until all.size == 8 # Fix for fuses LSB
           all.each_with_index do |label, i|
-
+            next unless label
             lbl = para  label
             ch = check :checked => avr_bool(@fuses_store[fuse][i])
             ch.click do |c|
@@ -294,7 +322,8 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
 
   def write_fuse(fu)
     hex = @fuses_store["#{fu}hex"].upcase
-    run_comm "#{fu}:w:0x#{hex}:m"
+    comm = "#{fu}:w:0x#{hex}:m"
+    run_comm comm if confirm("Command: #{comm}")
   end
 
   def changed(obj)
@@ -317,13 +346,11 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
 
   # #{Conf[:memory]}
   def read_from_chip(fuse)
-    run_comm "#{fuse}:r:#{fuse}:h"
+    run_comm "#{fuse}:r:/tmp/#{fuse}:h"
     name =  (fuse =~ /\// ? fuse.split("/")[1] : fuse)
-    data = File.read(fuse.to_s).chomp
+    data = File.read("/tmp/#{fuse}").chomp
     log "Data: #{data}"
-    p name
     @fuses_store.set(name, Integer(data).to_s(16))
-    p @fuses_store
     print_fuses
   end
 
