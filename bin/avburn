@@ -274,7 +274,10 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
   # Methods
   #
   def run_hex_comm(c)
-    run_comm "#{@memory}:#{c}:#{ENV['HOME']}/#{AvbHex}/#{@hexfile}"
+    Thread.new do
+    run_comm("#{@memory}:#{c}:#{AvbHex}/#{@hexfile}") # { alert "Done!" }
+    dialog
+    end
   end
 
   def print_fuses

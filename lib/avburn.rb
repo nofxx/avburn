@@ -144,7 +144,7 @@ class FuseStore < Hash
     hex = "0#{hex}" if hex.size == 1
     hex = hex[0,2]
     self[fuse.to_sym] =  Integer("0x#{hex}").to_s(2).rjust(8, "0").split(//)
-    self["#{fuse}hex"] = hex
+    self["#{fuse}hex"] = hex.upcase
   end
 
   def set_bit(fuse, bit, bool)
