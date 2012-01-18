@@ -1,22 +1,28 @@
-:attinyx5:
+:tx5: &attinyx5
   :hfuse:
   - RSTDISBL
   - DWEN
   - SPIEN
   - WDTON
   - EESAVE
-  - BOOTSZ0
-  - BOOTSZ1
-  - BOOTRST
+  - BODLEVEL2
+  - BODLEVEL1
+  - BODLEVEL0
   :lfuse:
   - CKDIB8
   - CKOUT
   - SUT1
   - SUT0
-  - CKSEL0
-  - CKSEL1
-  - CKSEL2
   - CKSEL3
+  - CKSEL2
+  - CKSEL1
+  - CKSEL0
+  :efuse:
+  - SELFPRGEN
+
+:t25: *attinyx5
+:t45: *attinyx5
+:t85: *attinyx5
 
 :atmega8:
   :hfuse:
