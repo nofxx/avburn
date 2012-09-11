@@ -1,50 +1,34 @@
-require 'rubygems'
 require 'bundler'
-begin
-  Bundler.setup(:default, :development)
-rescue Bundler::BundlerError => e
-  $stderr.puts e.message
-  $stderr.puts "Run `bundle install` to install missing gems"
-  exit e.status_code
-end
-require 'rake'
+Bundler.setup
 
-require 'jeweler'
-Jeweler::Tasks.new do |gem|
-  # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
-  gem.name = "avburn"
-  gem.homepage = "http://github.com/nofxx/avburn"
-  gem.license = "MIT"
-  gem.summary = %Q{Shoes based GUI for AVRDUDE}
-  gem.description = %Q{Shoes based GUI for AVRDUDE, burn fuses, bootloaders}
-  gem.email = "x@nofxx.com"
-  gem.authors = ["Marcos Piccinini"]
-  # Include your dependencies below. Runtime dependencies are required when using your gem,
-  # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
-  #  gem.add_runtime_dependency 'jabber4r', '> 0.1'
-  #  gem.add_development_dependency 'rspec', '> 1.2.3'
-end
-Jeweler::RubygemsDotOrgTasks.new
+require "rspec"
+require "rspec/core/rake_task"
 
-require 'rspec/core'
-require 'rspec/core/rake_task'
+$LOAD_PATH.unshift File.expand_path("../lib", __FILE__)
+require "avburn/version"
+
+desc "Builds the gem"
+task :gem => :build
+task :build do
+  system "gem build avburn.gemspec"
+  Dir.mkdir("pkg") unless Dir.exists?("pkg")
+  system "mv avburn-#{Avburn::VERSION}.gem pkg/"
+end
+
+task :install => :build do
+  system "sudo gem install pkg/avburn-#{Avburn::VERSION}.gem"
+end
+
+desc "Release the gem - Gemcutter"
+task :release => :build do
+  system "git tag -a v#{Avburn::VERSION} -m 'Tagging #{Avburn::VERSION}'"
+  system "git push --tags"
+  system "gem push pkg/avburn-#{Avburn::VERSION}.gem"
+end
+
+
 RSpec::Core::RakeTask.new(:spec) do |spec|
-  spec.pattern = FileList['spec/**/*_spec.rb']
+  spec.pattern = "spec/**/*_spec.rb"
 end
 
-RSpec::Core::RakeTask.new(:rcov) do |spec|
-  spec.pattern = 'spec/**/*_spec.rb'
-  spec.rcov = true
-end
-
-task :default => :spec
-
-require 'rake/rdoctask'
-Rake::RDocTask.new do |rdoc|
-  version = File.exist?('VERSION') ? File.read('VERSION') : ""
-
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "avburn #{version}"
-  rdoc.rdoc_files.include('README*')
-  rdoc.rdoc_files.include('lib/**/*.rb')
-end
+task :default => [:spec]
