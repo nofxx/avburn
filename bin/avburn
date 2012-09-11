@@ -1,15 +1,20 @@
 #!/usr/bin/env shoes
 require 'rubygems'
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-
-# Distribute as rubygem
-exec "shoes #{__FILE__}" unless Object.const_defined? "Shoes"
-
 require 'avburn'
 include Avburn
 
 
-Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
+#if Avburn.work(ARGV, ARGF)
+  # avrdude -v -c stk500 -p m162 -P /dev/ttyS1 -U hfuse:r:high.txt:r -U lfuse:r:low.txt:r
+  # avrdude Version 4.4.0
+# exit
+#else
+
+# Distribute as rubygem
+exec "shoes #{__FILE__}" unless Object.const_defined? "Shoes"
+
+Shoes.app :title => "AV bu R n", :width => 1050, :height => 730 do
   background gradient(rgb(245, 245, 245), rgb(190,190,190))
   #  background "#e0e0e0"
 
@@ -247,6 +252,16 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
     # print_fuses
 
 
+
+
+      stack(:margin_top => 5, :width => "100%", :height => 220) do#, , :scroll => true) do
+      flow do
+        caption "Log    "
+        button("Clear") { @log.text = "" }
+      end
+      @log = para "", :family => "Inconsolata;monospace;monospaced"
+    end
+
     flow do
       flow(:width => "3%", :margin => 5) do
         @status = flow {}
@@ -258,15 +273,6 @@ Shoes.app :title => "AVbuRn", :width => 1050, :height => 730 do
         @footer = para "AVRburn v0.1"
       end
     end
-
-      stack(:margin_top => 5, :width => "100%") do#, :height => 350, :scroll => true) do
-      flow do
-        caption "Log    "
-        button("Clear") { @log.text = "" }
-      end
-      @log = para "", :family => "Inconsolata;monospace;monospaced"
-    end
-
   end
 
   #
@@ -387,3 +393,4 @@ end
 #   end
 # end
 
+# end if repl
